@@ -1,27 +1,30 @@
-using Slide2Doc.Web.Components;
+using FluentValidation;
+using Slide2Doc.Application;
+using Slide2Doc.Domain.Entities;
+using Slide2Doc.Infrastructure;
+using Slide2Doc.Web.Services;
+using Slide2Doc.Web.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
+builder.Services.AddLogging();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure();
+builder.Services.AddScoped<AppState>();
+builder.Services.AddValidatorsFromAssemblyContaining<UploadRequestValidator>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    app.UseExceptionHandler("/Error");
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
-app.UseAntiforgery();
-
-app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.UseStaticFiles();
+app.UseRouting();
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
 
 app.Run();

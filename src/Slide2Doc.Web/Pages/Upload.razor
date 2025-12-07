@@ -1,0 +1,103 @@
+@page "/"
+@inject IValidator<UploadRequest> Validator
+@inject AppState AppState
+@inject ICompileDocumentService CompileService
+@inject NavigationManager Navigation
+@inject ILogger<Upload> Logger
+
+<h1>Upload</h1>
+<p>Upload the PPTX outline and one or more DOCX sources. Files are validated in-memory and never written to disk.</p>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <div class="validation">@_errorMessage</div>
+}
+
+<EditForm OnValidSubmit="HandleUpload" Model="this">
+    <div class="mb-3">
+        <label for="pptx">PPTX Outline</label>
+        <InputFile id="pptx" OnChange="OnPptxChanged" accept=".pptx" />
+    </div>
+    <div class="mb-3">
+        <label for="docx">DOCX Sources</label>
+        <InputFile id="docx" OnChange="OnDocxChanged" multiple accept=".docx" />
+    </div>
+    <button type="submit">Process</button>
+</EditForm>
+
+@if (_uploadErrors.Any())
+{
+    <ul class="validation">
+        @foreach (var error in _uploadErrors)
+        {
+            <li>@error</li>
+        }
+    </ul>
+}
+
+@code {
+    private IBrowserFile? _pptxFile;
+    private IReadOnlyList<IBrowserFile> _docxFiles = Array.Empty<IBrowserFile>();
+    private string? _errorMessage;
+    private readonly List<string> _uploadErrors = new();
+
+    private void OnPptxChanged(InputFileChangeEventArgs e)
+    {
+        _pptxFile = e.File;
+    }
+
+    private void OnDocxChanged(InputFileChangeEventArgs e)
+    {
+        _docxFiles = e.GetMultipleFiles();
+    }
+
+    private async Task HandleUpload()
+    {
+        _uploadErrors.Clear();
+        _errorMessage = null;
+
+        var request = new UploadRequest { DocxFiles = _docxFiles, PptxFile = _pptxFile };
+        var validation = Validator.Validate(request);
+        if (!validation.IsValid)
+        {
+            _uploadErrors.AddRange(validation.Errors.Select(e => e.ErrorMessage).Distinct());
+            return;
+        }
+
+        try
+        {
+            AppState.Reset();
+
+            var pptxBytes = await ToByteArrayAsync(_pptxFile!);
+            using var pptxStream = new MemoryStream(pptxBytes);
+
+            var sources = new List<SourceDocument>();
+            foreach (var file in _docxFiles)
+            {
+                var data = await ToByteArrayAsync(file);
+                sources.Add(new SourceDocument(file.Name, data));
+            }
+
+            var result = await CompileService.PrepareAsync(pptxStream, sources, AppState.Options, CancellationToken.None);
+            AppState.Topics.AddRange(result.Topics);
+            AppState.Sections.AddRange(result.Sections);
+            AppState.Matches.AddRange(result.Matches);
+            AppState.Sources.AddRange(sources);
+
+            Navigation.NavigateTo("/mapping");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Upload or processing failed");
+            _errorMessage = "Upload failed. Please ensure files are valid and try again.";
+        }
+    }
+
+    private static async Task<byte[]> ToByteArrayAsync(IBrowserFile file)
+    {
+        await using var memoryStream = new MemoryStream();
+        await using var stream = file.OpenReadStream(maxAllowedSize: UploadRequestValidator.MaxFileSizeBytes);
+        await stream.CopyToAsync(memoryStream);
+        return memoryStream.ToArray();
+    }
+}
