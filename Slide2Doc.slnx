@@ -1,2 +1,5 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Slide2Doc.Web/Slide2Doc.Web.csproj" />
+  </Folder>
 </Solution>
