@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Test.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Slide2Doc.Infrastructure/Slide2Doc.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Slide2Doc.Application/Slide2Doc.Application.csproj" />
+    <ProjectReference Include="../../src/Slide2Doc.Domain/Slide2Doc.Domain.csproj" />
+  </ItemGroup>
+</Project>

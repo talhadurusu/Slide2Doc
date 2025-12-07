@@ -1,0 +1,70 @@
+@page "/mapping"
+@inject AppState AppState
+
+<h1>Mapping</h1>
+<p>Review automatic matches and override manually if needed.</p>
+
+@if (!AppState.Matches.Any())
+{
+    <p>No matches to display. Please upload files first.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Topic</th>
+                <th>Matched Section</th>
+                <th>Score</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var match in AppState.Matches.OrderBy(m => m.Topic.Order))
+            {
+                <tr>
+                    <td>@match.Topic.Title</td>
+                    <td>
+                        <select value="@(match.Section?.HeadingText ?? string.Empty)" @onchange="e => OnManualSelection(match, e.Value?.ToString())">
+                            <option value="">-- None --</option>
+                            @foreach (var section in AppState.Sections)
+                            {
+                                <option value="@section.HeadingText" selected="@(section.HeadingText == match.Section?.HeadingText)">@section.SourceDocName - @section.HeadingText</option>
+                            }
+                        </select>
+                    </td>
+                    <td>@match.Score</td>
+                    <td>@match.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private void OnManualSelection(TopicMatch match, string? headingText)
+    {
+        if (string.IsNullOrWhiteSpace(headingText))
+        {
+            UpdateMatch(match, null);
+            return;
+        }
+
+        var section = AppState.Sections.FirstOrDefault(s => s.HeadingText.Equals(headingText, StringComparison.OrdinalIgnoreCase));
+        UpdateMatch(match, section);
+    }
+
+    private void UpdateMatch(TopicMatch match, DocumentSection? section)
+    {
+        var index = AppState.Matches.IndexOf(match);
+        if (index >= 0)
+        {
+            AppState.Matches[index] = match with
+            {
+                Section = section,
+                Status = section == null ? MatchStatus.NotFound : MatchStatus.Manual,
+                Score = section == null ? 0 : match.Score
+            };
+        }
+    }
+}
